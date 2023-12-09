@@ -1,0 +1,88 @@
+version: '3'
+
+services:
+
+  drupal:
+    build:
+      dockerfile: ./Dockerfile
+      # dockerfile: ./dev-dockerfile
+      context: ./drupal
+      target: ${DRUPAL_ENV}
+    image: everynameistaken1/drupal:0.1.1
+    container_name: drupal
+    depends_on:
+      - postgres
+    environment:
+      - PROJECT_NAME=${PROJECT_NAME}
+      - CLONE_FLAGS=${CLONE_FLAGS}
+      - CLONE_REPOSITORY=${CLONE_REPOSITORY}
+      - ACCOUNT_NAME=${ACCOUNT_NAME}
+      - ACCOUNT_MAIL=${ACCOUNT_MAIL}
+      - SITE_MAIL=${SITE_MAIL}
+      - SITE_NAME=${SITE_NAME}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD_FILE=${POSTGRES_PASSWORD_FILE}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_HOST=${POSTGRES_HOST}
+      - POSTGRES_PORT=${POSTGRES_PORT}
+      - TABLE_EXISTS=${TABLE_EXISTS}
+      - GIT_USERNAME=${GIT_USERNAME}
+      - GIT_EMAIL=${GIT_EMAIL}
+      - THIRD_PARTY_MODULES_PROD=${THIRD_PARTY_MODULES_PROD}
+      - THIRD_PARTY_MODULES_DEV=${THIRD_PARTY_MODULES_DEV}
+      - XDEBUG_MODE=${XDEBUG_MODE}
+    volumes:
+      - codebase:/var/www/html
+      - nvim:/root/.local
+    secrets:
+      - git_pass
+      - postgres_pass
+      - site_pass
+      - account_pass
+
+  nginx:
+    build:
+      context: ./nginx
+      args:
+        - projectName=${PROJECT_NAME}
+      dockerfile: ./Dockerfile
+    container_name: nginx
+    depends_on:
+      - drupal
+    ports:
+      - ${PORT}:80
+    volumes:
+      - codebase:/var/www/html:ro
+    restart: unless-stopped
+
+  postgres:
+    build:
+      context: ./postgres
+      dockerfile: ./Dockerfile
+    container_name: postgres
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD_FILE=${POSTGRES_PASSWORD_FILE}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_HOST=${POSTGRES_HOST}
+      - POSTGRES_PORT=${POSTGRES_PORT}
+      - TABLE_EXISTS=${TABLE_EXISTS}
+    volumes:
+      - /var/lib/postgresql/data
+    restart: unless-stopped
+    secrets:
+      - postgres_pass
+
+volumes:
+  codebase:
+  nvim:
+
+secrets:
+  git_pass:
+    file: ./secrets/git-pass.txt
+  postgres_pass:
+    file: ./secrets/postgres-pass.txt
+  site_pass:
+    file: ./secrets/site-pass.txt
+  account_pass:
+    file: ./secrets/account-pass.txt

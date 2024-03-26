@@ -1,0 +1,176 @@
+name: ci
+
+on:
+  push:
+    branches:
+      - "main"
+
+jobs:
+  drupal-base:
+    runs-on: ubuntu-latest
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@v4
+      -
+        name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      -
+        name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      -
+        name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: ./drupal
+          file: ./drupal/Dockerfile
+          target: drupal-base
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/drupal-base:latest
+  only-drupal:
+    runs-on: ubuntu-latest
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@v4
+      -
+        name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      -
+        name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      -
+        name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: ./drupal
+          file: ./drupal/Dockerfile
+          target: only-drupal
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/only-drupal:latest
+  xdebug-base:
+    runs-on: ubuntu-latest
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@v4
+      -
+        name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      -
+        name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      -
+        name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: ./drupal
+          file: ./drupal/Dockerfile
+          target: xdebug-base
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/xdebug-base:latest
+  xdebug-vscode:
+    runs-on: ubuntu-latest
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@v4
+      -
+        name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      -
+        name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      -
+        name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: ./drupal
+          file: ./drupal/Dockerfile
+          target: xdebug-vscode
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/xdebug-vscode:latest
+  xdebug-nvim:
+    runs-on: ubuntu-latest
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@v4
+      -
+        name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      -
+        name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      -
+        name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: ./drupal
+          file: ./drupal/Dockerfile
+          target: xdebug-nvim
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/xdebug-nvim:latest
+  postgres:
+    runs-on: ubuntu-latest
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@v4
+      -
+        name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      -
+        name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      -
+        name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: ./db
+          file: ./db/Dockerfile
+          target: postgres
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/drupal-postgres:latest
+  mysql:
+    runs-on: ubuntu-latest
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@v4
+      -
+        name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      -
+        name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      -
+        name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: ./db
+          file: ./db/Dockerfile
+          target: mysql
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/drupal-mysql:latest

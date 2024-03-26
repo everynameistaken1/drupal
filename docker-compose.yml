@@ -1,0 +1,169 @@
+version: '3'
+
+services:
+
+  drupal:
+    # Look at ./drupal/Dockerfile to see how image is built.
+    image: everynameistaken1/${DRUPAL_ENV}
+    container_name: drupal
+    command: /bin/sh -c ". /root/.config/drupal/scripts/start-script.sh"
+    depends_on:
+      - db
+    environment:
+      - DRUPAL_ENV=${DRUPAL_ENV}
+      - PROJECT_NAME=${PROJECT_NAME}
+      - CLONE_FLAGS=${CLONE_FLAGS}
+      - CLONE_REPOSITORY=${CLONE_REPOSITORY}
+      - COMPOSER_CREATE_REPOSITORY=${COMPOSER_CREATE_REPOSITORY}
+      - ACCOUNT_NAME=${ACCOUNT_NAME}
+      - ACCOUNT_MAIL=${ACCOUNT_MAIL}
+      - SITE_MAIL=${SITE_MAIL}
+      - SITE_NAME=${SITE_NAME}
+      - DATABASE_CHOICE=${DATABASE_CHOICE}
+      - DB_USER=${DB_USER}
+      # DB_HOST needs to be same as database service name in this file.
+      - DB_HOST=db
+      - DB_DATABASE_NAME=${DB_DATABASE_NAME}
+      - DB_USER_PASSWORD_FILE=${DB_USER_PASSWORD_FILE}
+      # TABLE_EXISTS needs to be "users" for ./drupal/initialize-repository.sh to work.
+      - TABLE_EXISTS=users
+      - GIT_USERNAME=${GIT_USERNAME}
+      - GIT_EMAIL=${GIT_EMAIL}
+      - THIRD_PARTY_MODULES_PROD=${THIRD_PARTY_MODULES_PROD}
+      - THIRD_PARTY_MODULES_DEV=${THIRD_PARTY_MODULES_DEV}
+      - XDEBUG_MODE=${XDEBUG_MODE}
+    volumes:
+      - codebase:/var/www/html
+      - nvim:/root/.local
+      - ./drupal/backup:/root/.config/drupal/backup
+      - ./drupal/initDrupal:/root/.config/drupal/initDrupal
+    networks:
+      - backend
+      - frontend
+    secrets:
+      - git_pass
+      - site_pass
+      - account_pass
+      - db_user_pass
+    restart: unless-stopped
+
+  nginx:
+    build:
+      context: ./nginx
+      args:
+        - projectName=${PROJECT_NAME}
+      dockerfile: ./Dockerfile
+    container_name: nginx
+    depends_on:
+      - drupal
+    ports:
+      - ${NGINX_PORT}:80
+    volumes:
+      - codebase:/var/www/html:ro
+    restart: unless-stopped
+    networks:
+      - frontend
+
+  db:
+    # See ./db/Dockerfile to see how images are built.
+    image: everynameistaken1/drupal-${DATABASE_CHOICE}
+    container_name: db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD_FILE=${DB_USER_PASSWORD_FILE}
+      - POSTGRES_DB=${DB_DATABASE_NAME}
+      - MYSQL_USER=${DB_USER}
+      - MYSQL_DATABASE=${DB_DATABASE_NAME}
+      - MYSQL_ROOT_PASSWORD_FILE=${DB_ROOT_PASSWORD_FILE}
+      - MYSQL_PASSWORD_FILE=${DB_USER_PASSWORD_FILE}
+    secrets:
+      - db_root_pass
+      - db_user_pass
+    networks:
+      - backend
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - postgres-data:/var/lib/postgresql/data
+      - ./db/initdb:/docker-entrypoint-initdb.d
+
+  mailhog:
+    image: mailhog/mailhog
+    container_name: mailhog
+    ports:
+      - ${MAILHOG_PORT}:8025
+    networks:
+      - frontend
+
+  # varnish:
+  #   # If you wish to use varnish, make sure to run the varnish script inside drupal container.
+  #   # Its location is /var/www/html within drupal container. drupal/purge and drupal/purge_purger_http
+  #   # will be installed. Follow link below to learn how to configure drupal.
+  #   # https://www.varnish-software.com/developers/tutorials/configuring-varnish-drupal/
+  #   image: varnish:stable
+  #   container_name: varnish
+  #   volumes:
+  #     - "./varnish/default.vcl:/etc/varnish/default.vcl:ro"
+  #   ports:
+  #     - ${VARNISH_PORT}:80
+  #   tmpfs:
+  #     - /var/lib/varnish:exec
+  #   depends_on:
+  #     - "nginx"
+  #   restart: unless-stopped
+  #   networks:
+  #     - frontend
+
+  # solr:
+  #   # If you wish to use solr, make sure to run the solr script inside drupal container.
+  #   # Its location is /var/www/html within drupal container. drupal/search_api_solr
+  #   # will be installed. Follow link below to learn how to configure drupal.
+  #   # https://www.youtube.com/watch?v=5e_9DqHAD2g
+  #   image: solr
+  #   container_name: solr
+  #   ports:
+  #     - 8983:8983
+  #   command:
+  #     - solr-precreate
+  #     - drupal
+  #   volumes:
+        # Don't forget to create solr folder according to
+        # volume below, put solr config here.
+  #     - ./solr:/var/solr/data/drupal
+  #   networks:
+  #     - frontend
+  #     - backend
+  #   restart: unless-stopped
+
+  # # Uncomment if you want adminer.
+  # adminer:
+  #   image: adminer
+  #   container_name: adminer
+  #   ports:
+  #     - ${ADMINER_PORT}:8080
+  #   restart: unless-stopped
+  #   networks:
+  #     - frontend
+  #     - backend
+
+volumes:
+  codebase:
+  nvim:
+  mysql-data:
+  postgres-data:
+
+networks:
+  frontend:
+  backend:
+
+secrets:
+  git_pass:
+    file: ./secrets/git-pass.txt
+  site_pass:
+    file: ./secrets/site-pass.txt
+  account_pass:
+    file: ./secrets/account-pass.txt
+  db_root_pass:
+    file: ./secrets/db-root-pass.txt
+  db_user_pass:
+    file: ./secrets/db-user-pass.txt

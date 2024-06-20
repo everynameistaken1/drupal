@@ -1,0 +1,20 @@
+{
+  "$schema": "/root/.local/share/nvim/mason/packages/phpactor/phpactor.schema.json",
+  "php_code_sniffer.enabled": true,
+  "php_code_sniffer.bin": "./vendor/squizlabs/php_codesniffer/bin/phpcs",
+  "language_server_phpstan.enabled": false,
+  "prophecy.enabled": false,
+  "code_transform.indentation": "  ",
+  "indexer.supported_extensions": [
+      "php",
+      "inc",
+      "module"
+  ],
+  "indexer.include_patterns": [
+    "/**/*.php",
+    "/**/*.inc",
+    "/**/*.module"
+  ],
+  "indexer.exclude_patterns": [
+  ]
+}

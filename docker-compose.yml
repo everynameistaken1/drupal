@@ -1,0 +1,212 @@
+services:
+
+  drupal:
+    # Look at ./drupal/Dockerfile to see how image is built.
+    image: everynameistaken1/${DRUPAL_ENV}
+    container_name: drupal
+    command: /bin/bash -c ". /root/.config/drupal/scripts/start-script.sh"
+    depends_on:
+      - db
+    env_file:
+      - ./.env
+      - ./env/project.env
+      - ./env/database.env
+      - ./env/git.env
+      - ./env/testing.env
+    volumes:
+      - codebase:/var/www/html
+      - nvim:/root/.local
+      - ./drupal/backup:/root/.config/drupal/backup
+      - ./drupal/initDrupal:/root/.config/drupal/initDrupal
+      - ./drupal/tests/FunctionalTests:/root/.config/drupal/FunctionalTests
+    networks:
+      backend:
+        ipv4_address: ${DRUPAL_IP_BACKEND}
+      frontend:
+        ipv4_address: ${DRUPAL_IP_FRONTEND}
+    secrets:
+      - git_pass
+      - site_pass
+      - account_pass
+      - db_user_pass
+    restart: unless-stopped
+
+  nginx:
+    build:
+      context: ./nginx
+      args:
+        - projectName=${PROJECT_NAME}
+      dockerfile: ./Dockerfile
+    container_name: nginx
+    env_file:
+      - ./.env
+      - ./env/project.env
+    depends_on:
+      - drupal
+    ports:
+      - ${NGINX_PORT}:80
+    volumes:
+      - codebase:/var/www/html:ro
+      - ./nginx/perf:/perf
+    restart: unless-stopped
+    networks:
+      frontend:
+        ipv4_address: ${NGINX_IP_FRONTEND}
+
+  db:
+    # See ./db/Dockerfile to see how images are built.
+    image: everynameistaken1/drupal-${DATABASE_CHOICE}
+    container_name: db
+    restart: unless-stopped
+    env_file:
+      - ./.env
+      - ./env/database.env
+      - ./env/NotToBeChanged/postgres.env
+      - ./env/NotToBeChanged/mysql.env
+    secrets:
+      - db_root_pass
+      - db_user_pass
+    networks:
+      backend:
+        ipv4_address: ${DB_IP_BACKEND}
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - postgres-data:/var/lib/postgresql/data
+      - ./db/initdb:/docker-entrypoint-initdb.d
+
+  mailhog:
+    image: mailhog/mailhog
+    container_name: mailhog
+    ports:
+      - ${MAILHOG_PORT}:8025
+    networks:
+      frontend:
+        ipv4_address: ${MAILHOG_IP_FRONTEND}
+
+  # # Uncomment if you want Chrome.
+  # chrome:
+  #   image: drupalci/webdriver-chromedriver:production
+  #   container_name: chrome
+  #   ulimits:
+  #     core:
+  #       soft: -1
+  #       hard: -1
+  #   expose:
+  #     - 4444
+  #     - 9515
+  #   entrypoint:
+  #     - chromedriver
+  #     - "--log-path=/tmp/chromedriver.log"
+  #     - "--verbose"
+  #     - "--allowed-ips="
+  #     - "--allowed-origins=*"
+  #   networks:
+  #     frontend:
+  #       ipv4_address: ${CHROME_IP_FRONTEND}
+
+  # # Uncomment if you want Memcached.
+  # memcached:
+  #   image: memcached:1-alpine
+  #   container_name: memcached
+  #   command: ["-m", "64"]
+  #   networks:
+  #     - backend
+  #   expose:
+  #     - 11211
+  #   restart: unless-stopped
+
+  # # Uncomment if you want Varnish.
+  # varnish:
+  #   # If you wish to use varnish, make sure to run the varnish script inside drupal container.
+  #   # Its location is /var/www/html within drupal container. drupal/purge and drupal/purge_purger_http
+  #   # will be installed. Follow link below to learn how to configure drupal.
+  #   # https://www.varnish-software.com/developers/tutorials/configuring-varnish-drupal/
+  #   build:
+  #     context: ./varnish
+  #     dockerfile: ./Dockerfile
+  #   container_name: varnish
+  #   volumes:
+  #     - "./varnish/default.vcl:/etc/varnish/default.vcl:ro"
+  #   ports:
+  #     - ${VARNISH_PORT}:80
+  #   tmpfs:
+  #     - /var/lib/varnish:exec
+  #   depends_on:
+  #     - "nginx"
+  #   restart: unless-stopped
+  #   networks:
+  #     frontend:
+  #       ipv4_address: ${VARNISH_IP_FRONTEND}
+
+  # # Uncomment if you want Solr.
+  # solr:
+  #   # If you wish to use solr, make sure to run the solr script inside drupal container.
+  #   # Its location is /var/www/html within drupal container. drupal/search_api_solr
+  #   # will be installed. Follow link below to learn how to configure drupal.
+  #   # https://www.youtube.com/watch?v=5e_9DqHAD2g
+  #   # Can only confirm that it works when using solr core, not solr cloud.
+  #   image: solr:8
+  #   container_name: solr
+  #   ports:
+  #     - 8983:8983
+  #   command:
+  #     - solr-precreate
+  #     - drupal
+  #   volumes:
+  #       # Don't forget to create solr folder according to
+  #       # volume below, put solr config here.
+  #     - ./solr:/var/solr/data/drupal
+  #   networks:
+  #     backend:
+  #       ipv4_address: ${SOLR_IP_BACKEND}
+  #     frontend:
+  #       ipv4_address: ${SOLR_IP_FRONTEND}
+  #   restart: unless-stopped
+
+  # # Uncomment if you want adminer.
+  # adminer:
+  #   image: adminer:4
+  #   container_name: adminer
+  #   ports:
+  #     - ${ADMINER_PORT}:8080
+  #   env_file:
+  #     - ./env/database.env
+  #     - ./env/NotToBeChanged/adminer.env
+  #   restart: unless-stopped
+  #   networks:
+  #     backend:
+  #       ipv4_address: ${ADMINER_IP_BACKEND}
+  #     frontend:
+  #       ipv4_address: ${ADMINER_IP_FRONTEND}
+
+volumes:
+  codebase:
+  nvim:
+  mysql-data:
+  postgres-data:
+
+networks:
+  frontend:
+    ipam:
+      driver: default
+      config:
+        - subnet: ${FRONTEND_NETWORK_SUBNET}
+          gateway: ${FRONTEND_NETWORK_GATEWAY}
+  backend:
+    ipam:
+      driver: default
+      config:
+        - subnet: ${BACKEND_NETWORK_SUBNET}
+          gateway: ${BACKEND_NETWORK_GATEWAY}
+
+secrets:
+  git_pass:
+    file: ./secrets/git-pass.txt
+  site_pass:
+    file: ./secrets/site-pass.txt
+  account_pass:
+    file: ./secrets/account-pass.txt
+  db_root_pass:
+    file: ./secrets/db-root-pass.txt
+  db_user_pass:
+    file: ./secrets/db-user-pass.txt

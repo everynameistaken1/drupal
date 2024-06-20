@@ -1,0 +1,13 @@
+secrets/git-pass.txt
+secrets/account-pass.txt
+secrets/site-pass.txt
+secrets/db-root-pass.txt
+secrets/db-user-pass.txt
+
+db/initdb/*
+
+drupal/initDrupal/*
+drupal/backup/*
+drupal/tests
+
+solr/*
